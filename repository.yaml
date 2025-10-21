@@ -1,0 +1,4 @@
+# https://developers.home-assistant.io/docs/add-ons/repository#repository-configuration
+name: "GO DAIKIN (unofficial)"
+url: "https://github.com/doubleukay/godaikin-ha"
+maintainer: Woon Wai Keen <doubleukay@doubleukay.com>
