@@ -380,8 +380,8 @@ class Controller:
             "Sta_IDRoomTemp": aircond.shadowState.Sta_IDRoomTemp,
             "Sta_ODAirTemp": aircond.shadowState.Sta_ODAirTemp,
             "energy": round(
-                energy_usage, 3
-            ),  # round to 3 decimal places to reduce mqtt chattiness
+                energy_usage, 2
+            ),  # round to 2 decimal places to reduce mqtt chattiness
         }
 
         await self.mqtt_publish(
