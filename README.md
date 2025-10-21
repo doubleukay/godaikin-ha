@@ -8,6 +8,7 @@
 - Eco/Breeze/Powerful/Sleep preset modes
 - Vertical and Horizontal fan swings
 - Power and Energy sensors
+- Status LED control
 
 ## Installation
 [![Open your Home Assistant instance with the godaikin-ha repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fdoubleukay%2Fgodaikin-ha)
