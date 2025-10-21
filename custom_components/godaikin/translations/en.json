@@ -1,0 +1,23 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Set up GO DAIKIN",
+                "description": "Enter your GO DAIKIN credentials",
+                "data": {
+                    "username": "Email",
+                    "password": "Password"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to GO DAIKIN",
+            "invalid_auth": "Invalid authentication credentials",
+            "no_airconds": "No air conditioners found in your GO DAIKIN account",
+            "unknown": "Unexpected error occurred"
+        },
+        "abort": {
+            "already_configured": "Account is already configured"
+        }
+    }
+}
