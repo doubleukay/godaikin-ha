@@ -1,0 +1,24 @@
+name: "GO DAIKIN (unofficial)"
+slug: godaikin
+version: "1.0.2"
+description: "Manage air conditioners through GO DAIKIN"
+startup: application
+init: false
+services:
+  - "mqtt:need"
+arch:
+  - armhf
+  - armv7
+  - aarch64
+  - amd64
+  - i386
+hassio_api: true
+homeassistant_api: true
+options:
+  godaikin_username: your@email.com
+  godaikin_password: ""
+  refresh_interval: 10
+schema:
+  godaikin_username: str
+  godaikin_password: password
+  refresh_interval: int
