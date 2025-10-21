@@ -1,6 +1,6 @@
 name: "GO DAIKIN (unofficial)"
 slug: godaikin
-version: "1.0.8"
+version: "1.0.9"
 description: "Manage air conditioners through GO DAIKIN"
 startup: application
 init: false
