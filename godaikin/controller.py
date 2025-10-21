@@ -121,6 +121,8 @@ class Controller:
                 await self.handle_set_swing(unique_id, payload)
             case "swing_horizontal_mode":
                 await self.handle_set_swing_horizontal(unique_id, payload)
+            case "status_led":
+                await self.handle_set_status_led(unique_id, payload)
 
         # Preempt a state refresh so that changes are reflected immediately in HA
         self.preempt_state_refresh.set()
@@ -185,6 +187,13 @@ class Controller:
 
         swing_ = AircondSwing[swing.upper()]
         await self.api.set_swing(unique_id, swing=swing_, horizontal=True)
+
+    async def handle_set_status_led(self, unique_id: UniqueID, on_or_off: str):
+        logger.info("Handling set status LED", unique_id=unique_id, on_or_off=on_or_off)
+
+        on = on_or_off == "ON"
+
+        await self.api.set_status_led(unique_id, on)
 
     async def publish_discovery(self):
         logger.info("Publishing discovery messages")
@@ -279,6 +288,7 @@ class Controller:
             "energy": round(
                 energy_usage, 2
             ),  # round to 2 decimal places to reduce mqtt chattiness
+            "status_led": "OFF" if aircond.shadowState.Set_LEDOff else "ON",
         }
 
         await self.mqtt_publish(

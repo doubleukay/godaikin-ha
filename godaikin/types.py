@@ -470,6 +470,7 @@ class AircondMqttTopics:
     cmd_swing: str
     cmd_swing_horizontal: str
     cmd_preset: str
+    cmd_status_led: str
     status: str
     discovery: str
     sensor: str
@@ -487,6 +488,7 @@ class AircondMqttTopics:
             cmd_swing=f"{base}/set/swing_mode",
             cmd_swing_horizontal=f"{base}/set/swing_horizontal_mode",
             cmd_preset=f"{base}/set/preset_mode",
+            cmd_status_led=f"{base}/set/status_led",
             status=f"{base}/status",
             discovery=f"{DISCOVERY_PREFIX}/climate/{aircond.unique_id}/config",
             sensor=f"{base}/sensor",

@@ -9,12 +9,14 @@ from .types import *
 def make_discovery_messages(
     aircond: Aircond, topics: AircondMqttTopics
 ) -> list[DiscoveryMessage]:
-    return make_device_discovery_messages(
-        aircond, topics
-    ) + make_sensor_discovery_messages(aircond, topics)
+    return (
+        make_control_discovery_messages(aircond, topics)
+        + make_sensor_discovery_messages(aircond, topics)
+        + make_configuration_discovery_messages(aircond, topics)
+    )
 
 
-def make_device_discovery_messages(
+def make_control_discovery_messages(
     aircond: Aircond, topics: AircondMqttTopics
 ) -> list[DiscoveryMessage]:
     payload = {
@@ -187,5 +189,41 @@ def make_sensor_discovery_messages(
         }
 
         messages.append(DiscoveryMessage(topic=sensor_discovery_topic, payload=payload))
+
+    return messages
+
+
+def make_configuration_discovery_messages(
+    aircond: Aircond, topics: AircondMqttTopics
+) -> list[DiscoveryMessage]:
+
+    messages: list[DiscoveryMessage] = []
+
+    if aircond.shadowState.Ena_LEDOff:
+        norm_name = "status_led"
+        discovery_topic = (
+            f"{DISCOVERY_PREFIX}/light/{aircond.unique_id}/{norm_name}/config"
+        )
+        payload = {
+            "name": "Status LED",
+            "unique_id": f"{aircond.unique_id}_{norm_name}",
+            "command_topic": topics.cmd_status_led,
+            "state_topic": topics.sensor,
+            "state_value_template": "{{ value_json." + norm_name + " }}",
+            "qos": 0,
+            "retain": False,
+            "entity_category": "config",
+            "icon": "mdi:lightning-bolt-circle",
+            "availability_mode": "all",
+            "availability": [
+                {"topic": BRIDGE_AVAILABILITY_TOPIC},
+                {"topic": topics.availability},
+            ],
+            "device": {
+                "identifiers": [aircond.unique_id],
+            },
+        }
+
+        messages.append(DiscoveryMessage(topic=discovery_topic, payload=payload))
 
     return messages

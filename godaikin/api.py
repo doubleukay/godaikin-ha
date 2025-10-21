@@ -173,6 +173,14 @@ class ApiClient:
 
         await self._set_desired_state(unique_id, Set_OnOff=1)
 
+    async def set_status_led(self, unique_id: UniqueID, on: bool):
+        logger.info("Setting status LED", unique_id=unique_id, on=on)
+
+        if on:
+            await self._set_desired_state(unique_id, Set_LEDOff=0, Set_PwrInd=1)
+        else:
+            await self._set_desired_state(unique_id, Set_LEDOff=1, Set_PwrInd=0)
+
     async def _set_desired_state(self, unique_id: UniqueID, **state):
         aircond = self.airconds_by_unique_id[unique_id]
 
