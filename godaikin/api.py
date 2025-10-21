@@ -119,10 +119,8 @@ class ApiClient:
             case AircondPreset.SLEEP:
                 await self._set_desired_state(
                     unique_id,
-                    Set_Breeze=0,
-                    Set_Silent=1,
-                    Set_SmPwrfulplus=0,
-                    Set_Turbo=0,
+                    Set_Sleep=1,
+                    SetSmSleepplus=0,
                 )
 
     async def set_fan_mode(self, unique_id: UniqueID, fan: FanSpeed):

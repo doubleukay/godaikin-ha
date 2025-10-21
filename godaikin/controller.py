@@ -147,20 +147,11 @@ class Controller:
             "Handling set preset mode", unique_id=unique_id, preset_mode=preset_mode
         )
 
-        match preset_mode:
-            case "boost":
-                preset = AircondPreset.BOOST
-            case "comfort":
-                preset = AircondPreset.COMFORT
-            case "eco":
-                preset = AircondPreset.ECO
-            case "none":
-                preset = AircondPreset.NONE
-            case "sleep":
-                preset = AircondPreset.SLEEP
-            case _:
-                logger.warning("Unknown preset mode", preset_mode=preset_mode)
-                return
+        try:
+            preset = AircondPreset(preset_mode)
+        except ValueError:
+            logger.warning("Unknown preset mode", preset_mode=preset_mode)
+            preset = AircondPreset.NONE
 
         await self.api.set_preset(unique_id, preset=preset)
 
@@ -240,15 +231,15 @@ class Controller:
             mode = AircondMode(aircond.shadowState.Set_Mode).name.lower()
 
         if aircond.shadowState.Set_Turbo:
-            preset_mode = "boost"
+            preset_mode = AircondPreset.BOOST.value
         elif aircond.shadowState.Set_Breeze:
-            preset_mode = "comfort"
+            preset_mode = AircondPreset.COMFORT.value
         elif aircond.shadowState.Set_Ecoplus:
-            preset_mode = "eco"
+            preset_mode = AircondPreset.ECO.value
         elif aircond.shadowState.Set_Sleep:
-            preset_mode = "sleep"
+            preset_mode = AircondPreset.SLEEP.value
         else:
-            preset_mode = "none"
+            preset_mode = AircondPreset.NONE.value
 
         fan_mode = FanSpeed(aircond.shadowState.Set_Fan)
         swing_mode = AircondSwing(aircond.shadowState.Set_UDLvr)
