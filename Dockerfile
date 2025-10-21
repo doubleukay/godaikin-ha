@@ -1,5 +1,14 @@
-ARG BUILD_FROM
-FROM $BUILD_FROM
+# syntax=docker/dockerfile:1.6
+
+# Prepare two stages (one per arch).
+FROM ghcr.io/home-assistant/amd64-base-python:3.13-alpine3.22 AS base_amd64
+FROM ghcr.io/home-assistant/aarch64-base-python:3.13-alpine3.22 AS base_arm64
+
+# Select the right stage based on TARGETARCH.
+# For linux/amd64 => TARGETARCH=amd64 -> base_amd64
+# For linux/arm64 => TARGETARCH=arm64 -> base_arm64
+ARG TARGETARCH
+FROM base_$TARGETARCH AS final
 
 ENV PATH="/opt/venv/bin:$PATH" \
     PIP_NO_CACHE_DIR=1
