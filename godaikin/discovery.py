@@ -34,15 +34,15 @@ def make_device_discovery_messages(
         "fan_mode_command_topic": topics.cmd_fan,
         "fan_mode_state_topic": topics.status,
         "fan_mode_state_template": "{{ value_json.fan_mode }}",
-        "swing_modes": SWING_MODES,
+        "swing_modes": make_swing_modes(aircond),
         "swing_mode_command_topic": topics.cmd_swing,
         "swing_mode_state_topic": topics.status,
         "swing_mode_state_template": "{{ value_json.swing_mode }}",
-        "swing_horizontal_modes": SWING_MODES,
+        "swing_horizontal_modes": make_swing_horizontal_modes(aircond),
         "swing_horizontal_mode_command_topic": topics.cmd_swing_horizontal,
         "swing_horizontal_mode_state_topic": topics.status,
         "swing_horizontal_mode_state_template": "{{ value_json.swing_horizontal_mode }}",
-        "preset_modes": PRESET_MODES,
+        "preset_modes": make_preset_modes(aircond),
         "preset_mode_command_topic": topics.cmd_preset,
         "preset_mode_state_topic": topics.status,
         "preset_mode_value_template": "{{ value_json.preset_mode }}",
@@ -68,6 +68,51 @@ def make_device_discovery_messages(
     }
 
     return [DiscoveryMessage(topic=topics.discovery, payload=payload)]
+
+
+def make_preset_modes(aircond: Aircond) -> list[str]:
+    # Full preset mode list: ["boost", "comfort", "eco", "sleep"]
+
+    state = aircond.shadowState
+
+    preset_modes: list[str] = []
+    if state.Ena_Breeze:
+        preset_modes.append("comfort")
+    if state.Ena_Ecoplus:
+        preset_modes.append("eco")
+    if state.Ena_Silent:
+        preset_modes.append("sleep")
+    if state.Ena_Turbo:
+        preset_modes.append("powerful")
+
+    return preset_modes
+
+
+def make_swing_modes(aircond: Aircond) -> list[str]:
+    # Full swing mode list: ["Off", "Auto", "Step_1", "Step_2", "Step_3", "Step_4", "Step_5"]
+    state = aircond.shadowState
+
+    swing_modes: list[str] = ["Off", "Auto"]
+    if state.Ena_UDStep:
+        swing_modes += ["Step_1", "Step_2", "Step_3", "Step_4", "Step_5"]
+
+    return swing_modes
+
+
+def make_swing_horizontal_modes(aircond: Aircond) -> list[str] | None:
+    # Full swing mode list: ["Off", "Auto", "Step_1", "Step_2", "Step_3", "Step_4", "Step_5"]
+
+    state = aircond.shadowState
+
+    if not state.Ena_LRSwing:
+        return None
+
+    swing_modes: list[str] = ["Off", "Auto"]
+
+    if state.Ena_LRStep:
+        swing_modes += ["Step_1", "Step_2", "Step_3", "Step_4", "Step_5"]
+
+    return swing_modes
 
 
 def make_sensor_discovery_messages(

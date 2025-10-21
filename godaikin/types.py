@@ -496,8 +496,6 @@ class AircondMqttTopics:
 # HASS mappings
 HVAC_MODES = ["off", "cool", "dry", "fan_only"]
 FAN_MODES = ["auto", "low", "medium", "high"]
-PRESET_MODES = ["boost", "comfort", "eco", "sleep"]
-SWING_MODES = ["Off", "Auto", "Step_1", "Step_2", "Step_3", "Step_4", "Step_5"]
 
 # Daikin-specific constants
 MIN_TEMP = 16
