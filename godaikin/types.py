@@ -506,6 +506,12 @@ TEMP_STEP_AND_PRECISION = 1.0
 
 
 @dataclass
+class DiscoveryMessage:
+    topic: str
+    payload: dict
+
+
+@dataclass
 class EnergyResponse:
     aircond: Aircond
     energy: float
