@@ -9,6 +9,7 @@ services:
 arch:
   - aarch64
   - amd64
+image: ghcr.io/doubleukay/godaikin-ha
 hassio_api: true
 homeassistant_api: true
 options:
