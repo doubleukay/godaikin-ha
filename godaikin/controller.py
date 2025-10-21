@@ -31,10 +31,13 @@ class Controller:
     async def run(self):
         await self.publish_bridge_availability()
 
-        await asyncio.gather(
-            self.controller_loop(),
-            self.message_loop(),
-        )
+        try:
+            await asyncio.gather(
+                self.controller_loop(),
+                self.message_loop(),
+            )
+        finally:
+            await self.publish_bridge_offline()
 
     async def controller_loop(self):
         await self.publish_discovery()
@@ -57,6 +60,15 @@ class Controller:
         """
 
         await self.mqtt_publish(BRIDGE_AVAILABILITY_TOPIC, "online", qos=1, retain=True)
+
+    async def publish_bridge_offline(self):
+        """
+        Announce that the MQTT bridge is offline
+        """
+
+        await self.mqtt_publish(
+            BRIDGE_AVAILABILITY_TOPIC, "offline", qos=1, retain=True
+        )
 
     async def message_loop(self):
         topics = [f"{MQTT_PREFIX}/+/set/+"]
