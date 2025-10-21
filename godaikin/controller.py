@@ -135,9 +135,9 @@ class Controller:
 
         match preset_mode:
             case "boost":
-                preset = AircondPreset.POWERFUL
+                preset = AircondPreset.BOOST
             case "comfort":
-                preset = AircondPreset.BREEZE
+                preset = AircondPreset.COMFORT
             case "eco":
                 preset = AircondPreset.ECO
             case "none":

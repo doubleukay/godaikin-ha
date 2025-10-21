@@ -97,7 +97,7 @@ class ApiClient:
                     Set_SmPwrfulplus=0,
                     Set_Turbo=0,
                 )
-            case AircondPreset.BREEZE:
+            case AircondPreset.COMFORT:
                 await self._set_desired_state(
                     unique_id,
                     Set_Breeze=1,
@@ -110,7 +110,7 @@ class ApiClient:
                     Set_Ecoplus=1,
                     Set_SmEcomax=0,
                 )
-            case AircondPreset.POWERFUL:
+            case AircondPreset.BOOST:
                 await self._set_desired_state(
                     unique_id,
                     Set_Silent=0,

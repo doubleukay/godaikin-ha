@@ -76,14 +76,14 @@ def make_preset_modes(aircond: Aircond) -> list[str]:
     state = aircond.shadowState
 
     preset_modes: list[str] = []
-    if state.Ena_Breeze:
-        preset_modes.append("comfort")
-    if state.Ena_Ecoplus:
-        preset_modes.append("eco")
-    if state.Ena_Silent:
-        preset_modes.append("sleep")
     if state.Ena_Turbo:
-        preset_modes.append("powerful")
+        preset_modes.append(AircondPreset.BOOST.value)
+    if state.Ena_Breeze:
+        preset_modes.append(AircondPreset.COMFORT.value)
+    if state.Ena_Ecoplus:
+        preset_modes.append(AircondPreset.ECO.value)
+    if state.Ena_Silent:
+        preset_modes.append(AircondPreset.SLEEP.value)
 
     return preset_modes
 

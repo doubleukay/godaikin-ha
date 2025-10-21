@@ -454,9 +454,9 @@ class AircondSwing(IntEnum):
 
 class AircondPreset(Enum):
     NONE = "none"
-    BREEZE = "breeze"
+    COMFORT = "comfort"
     ECO = "eco"
-    POWERFUL = "powerful"
+    BOOST = "boost"
     SLEEP = "sleep"
 
 
