@@ -1,7 +1,7 @@
-name: "GO DAIKIN (unofficial)"
-slug: godaikin
-version: "1.0.9"
-description: "Manage air conditioners through GO DAIKIN"
+name: "GO DAIKIN (Fixed)"
+slug: godaikin-fixed
+version: "1.0.9-fix"
+description: "Manage air conditioners through GO DAIKIN (with energy fix)"
 startup: application
 init: false
 services:
