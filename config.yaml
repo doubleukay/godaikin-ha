@@ -1,6 +1,6 @@
 name: "GO DAIKIN (Fixed)"
 slug: godaikin-fixed
-version: "1.0.9-fix"
+version: "1.0.10"
 description: "Manage air conditioners through GO DAIKIN (with energy fix)"
 startup: application
 init: false
