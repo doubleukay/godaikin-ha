@@ -207,6 +207,8 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
             ClimateEntityFeature.TARGET_TEMPERATURE
             | ClimateEntityFeature.FAN_MODE
             | ClimateEntityFeature.SWING_MODE
+            | ClimateEntityFeature.TURN_ON
+            | ClimateEntityFeature.TURN_OFF
         )
 
         if self.preset_modes:
@@ -271,4 +273,14 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
             preset = AircondPreset.NONE
 
         await self.coordinator.api.set_preset(self._unique_id, preset=preset)
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_on(self) -> None:
+        """Turn the entity on."""
+        await self.coordinator.api.turn_on(self._unique_id)
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(self) -> None:
+        """Turn the entity off."""
+        await self.coordinator.api.turn_off(self._unique_id)
         await self.coordinator.async_request_refresh()
