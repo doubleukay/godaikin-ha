@@ -11,7 +11,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfEnergy, UnitOfPower, UnitOfTemperature
+from homeassistant.const import UnitOfEnergy, UnitOfPower, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -40,6 +40,7 @@ async def async_setup_entry(
                 GodaikinIndoorTempSensor(coordinator, unique_id),
                 GodaikinOutdoorTempSensor(coordinator, unique_id),
                 GodaikinEnergySensor(coordinator, unique_id),
+                GodaikinMoldProofRemainingSensor(coordinator, unique_id),
             ]
         )
 
@@ -167,3 +168,41 @@ class GodaikinEnergySensor(GodaikinSensorBase):
     def native_value(self) -> float | None:
         """Return the energy consumption."""
         return round(self.coordinator.get_energy_usage(self._unique_id), 2)
+
+
+class GodaikinMoldProofRemainingSensor(GodaikinSensorBase):
+    """Mold-proof remaining time sensor for GO DAIKIN air conditioner."""
+
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    def __init__(
+        self,
+        coordinator: GodaikinDataUpdateCoordinator,
+        unique_id: UniqueID,
+    ) -> None:
+        """Initialize the mold-proof remaining sensor."""
+        super().__init__(coordinator, unique_id, "mold_proof_remaining")
+        self._attr_name = f"{self.aircond.ACName} Mold-proof remaining"
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        if not self.coordinator.last_update_success or not self.aircond.is_connected:
+            return False
+        if not self.coordinator.mold_proof:
+            return False
+        return self.coordinator.mold_proof.is_active(self._unique_id)
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the remaining mold-proof time in minutes."""
+        if not self.coordinator.mold_proof:
+            return None
+        if not self.coordinator.mold_proof.is_active(self._unique_id):
+            return None
+        remaining_seconds = self.coordinator.mold_proof.get_remaining_time(
+            self._unique_id
+        )
+        return round(remaining_seconds / 60, 1)
