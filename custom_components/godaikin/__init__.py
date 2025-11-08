@@ -77,8 +77,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Clean up resources and remove coordinator from hass.data
     if unload_ok:
         coordinator = hass.data[DOMAIN].pop(entry.entry_id)
-        # Close httpx client
-        await coordinator.api.httpx.aclose()
+        # Close aiohttp session
+        await coordinator.api.session.close()
 
     return unload_ok
 

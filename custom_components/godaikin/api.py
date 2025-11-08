@@ -4,7 +4,7 @@ API Client for interacting with the GO DAIKIN cloud service.
 
 import asyncio
 from datetime import datetime as dt, timedelta
-import httpx
+import aiohttp
 import logging
 
 from .auth import AuthClient
@@ -20,17 +20,17 @@ class ApiClient:
         self.auth = auth
 
         self.airconds_by_unique_id: dict[UniqueID, Aircond] = {}
-        self.httpx = httpx.AsyncClient()
+        self.session = aiohttp.ClientSession()
 
     async def _api_request(self, endpoint: str, payload: dict) -> dict:
         jwt_token = await self.auth.get_jwt_token()
-        resp = await self.httpx.post(
+        async with self.session.post(
             f"{BASE_URL}{endpoint}",
             json=payload,
             headers={"authorization": jwt_token},
-        )
-        resp.raise_for_status()
-        return resp.json()
+        ) as resp:
+            resp.raise_for_status()
+            return await resp.json()
 
     async def get_airconds(self) -> list[Aircond]:
         _LOGGER.debug("Getting airconds")
