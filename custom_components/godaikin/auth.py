@@ -4,7 +4,7 @@ Authenticates against AWS Cognito to obtain JWT tokens for GO DAIKIN API access.
 
 from __future__ import annotations
 
-import aioboto3
+from aiobotocore.session import get_session
 from dataclasses import dataclass
 from datetime import datetime as dt, timedelta
 import logging
@@ -23,7 +23,7 @@ class AuthClient:
         self.username = username
         self.password = password
 
-        self.session = aioboto3.Session()
+        self.session = get_session()
         self.token: CognitoToken | None = None
 
     async def get_jwt_token(self) -> str:
@@ -38,7 +38,9 @@ class AuthClient:
         return self.token.id_token
 
     async def init_cognito_token(self) -> CognitoToken:
-        async with self.session.client("cognito-idp", region_name=REGION) as cognito:  # type: ignore
+        async with self.session.create_client(
+            "cognito-idp", region_name=REGION
+        ) as cognito:
             resp = await cognito.initiate_auth(
                 ClientId=CLIENT_ID,
                 AuthFlow="USER_PASSWORD_AUTH",
@@ -46,7 +48,7 @@ class AuthClient:
                     "USERNAME": self.username,
                     "PASSWORD": self.password,
                 },
-            )
+            )  # type: ignore
 
             auth = resp.get("AuthenticationResult")
             if not auth:
@@ -71,14 +73,16 @@ class AuthClient:
             return token
 
     async def refresh_jwt_token(self, token: CognitoToken) -> CognitoToken:
-        async with self.session.client("cognito-idp", region_name=REGION) as cognito:  # type: ignore
+        async with self.session.create_client(
+            "cognito-idp", region_name=REGION
+        ) as cognito:
             resp = await cognito.initiate_auth(
                 ClientId=CLIENT_ID,
                 AuthFlow="REFRESH_TOKEN_AUTH",
                 AuthParameters={
                     "REFRESH_TOKEN": token.refresh_token,
                 },
-            )
+            )  # type: ignore
 
             auth = resp.get("AuthenticationResult")
             if not auth:

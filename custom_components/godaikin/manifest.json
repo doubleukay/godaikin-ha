@@ -10,8 +10,6 @@
     "integration_type": "hub",
     "iot_class": "cloud_polling",
     "issue_tracker": "https://github.com/doubleukay/godaikin-ha/issues",
-    "requirements": [
-        "aioboto3==15.5.0"
-    ],
+    "requirements": [],
     "version": "2.1.1"
 }
