@@ -103,6 +103,13 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
     @property
     def hvac_mode(self) -> HVACMode:
         """Return current HVAC mode."""
+        # Check if mold-proof is active
+        if self.coordinator.mold_proof and self.coordinator.mold_proof.is_active(
+            self._unique_id
+        ):
+            # Show as OFF while mold-proof is running
+            return HVACMode.OFF
+
         if not self.aircond.is_on:
             return HVACMode.OFF
 
@@ -127,6 +134,14 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
     @property
     def fan_mode(self) -> str | None:
         """Return the fan setting."""
+        # If mold-proof is active, show the previous fan speed
+        if self.coordinator.mold_proof and self.coordinator.mold_proof.is_active(
+            self._unique_id
+        ):
+            state = self.coordinator.mold_proof.get_state(self._unique_id)
+            if state:
+                return state.previous_fan_speed.name.lower()
+
         fan_speed = FanSpeed(self.aircond.shadowState.Set_Fan)
         return fan_speed.name.lower()
 
@@ -221,7 +236,32 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new HVAC mode."""
+        # Check if mold-proof is active and interrupt it
+        if self.coordinator.mold_proof:
+            was_active, prev_fan = (
+                await self.coordinator.mold_proof.interrupt_mold_proof(self._unique_id)
+            )
+            if was_active:
+                _LOGGER.debug("Mold-proof interrupted for mode change")
+
         if hvac_mode == HVACMode.OFF:
+            # Check if we should start mold-proof
+            if (
+                self.coordinator.mold_proof
+                and self.coordinator.mold_proof.is_enabled(self._unique_id)
+                and self.aircond.is_on
+            ):
+                # Only start mold-proof if coming from cool or dry mode
+                current_mode = AircondMode(self.aircond.shadowState.Set_Mode)
+                if current_mode in (AircondMode.COOL, AircondMode.DRY):
+                    prev_fan = FanSpeed(self.aircond.shadowState.Set_Fan)
+                    await self.coordinator.mold_proof.start_mold_proof(
+                        self._unique_id, current_mode, prev_fan
+                    )
+                    await self.coordinator.async_request_refresh()
+                    return
+
+            # Normal turn off
             await self.coordinator.api.turn_off(self._unique_id)
         elif hvac_mode == HVACMode.COOL:
             await self.coordinator.api.set_mode(self._unique_id, mode=AircondMode.COOL)
@@ -256,9 +296,9 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
         )
         await self.coordinator.async_request_refresh()
 
-    async def async_set_swing_horizontal_mode(self, swing_mode: str) -> None:
+    async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new horizontal swing mode."""
-        swing = AircondSwing[swing_mode.upper()]
+        swing = AircondSwing[swing_horizontal_mode.upper()]
         await self.coordinator.api.set_swing(
             self._unique_id, swing=swing, horizontal=True
         )
@@ -277,10 +317,20 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
+        # Interrupt mold-proof if active
+        if self.coordinator.mold_proof:
+            was_active, prev_fan = (
+                await self.coordinator.mold_proof.interrupt_mold_proof(self._unique_id)
+            )
+            if was_active:
+                _LOGGER.debug("Mold-proof interrupted for turn on")
+                # Restore previous fan speed
+                await self.coordinator.api.set_fan_mode(self._unique_id, fan=prev_fan)
+
         await self.coordinator.api.turn_on(self._unique_id)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
-        await self.coordinator.api.turn_off(self._unique_id)
-        await self.coordinator.async_request_refresh()
+        # Use async_set_hvac_mode to leverage mold-proof logic
+        await self.async_set_hvac_mode(HVACMode.OFF)

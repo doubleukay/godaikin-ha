@@ -13,6 +13,7 @@ NOTE: This is an unofficial integration and is not affiliated with Daikin.
 - Vertical and Horizontal fan swings
 - Power and Energy sensors
 - Status LED control
+- Simulated mold-proof
 
 ## Installation
 
@@ -57,6 +58,7 @@ For each air conditioner, the following entities will be created:
 - **Energy**: Total energy consumption (kWh). This counter resets every time HA restarts.
 
 ### Configuration
+- **Mold-proof**: After the aircond is turned off, run it on fan mode for an hour to reduce mold and bacteria buildup. This is simulated and does not use Daikin's built-in mold-proof mode.
 - **Status LED**: Control the air conditioner's status LED light (if supported)
 
 ## Troubleshooting

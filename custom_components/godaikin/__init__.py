@@ -12,8 +12,14 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .api import ApiClient
 from .auth import AuthClient
-from .const import DOMAIN, PLATFORMS
+from .const import (
+    CONF_MOLD_PROOF_DURATION,
+    DEFAULT_MOLD_PROOF_DURATION,
+    DOMAIN,
+    PLATFORMS,
+)
 from .coordinator import GodaikinDataUpdateCoordinator
+from .mold_proof import MoldProofManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,12 +45,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception as err:
         raise ConfigEntryNotReady(f"Error connecting to GO DAIKIN: {err}") from err
 
+    # Initialize mold-proof manager
+    mold_proof_manager = MoldProofManager(hass, coordinator)
+    coordinator.mold_proof = mold_proof_manager
+
+    # Load saved mold-proof state from storage
+    await mold_proof_manager.async_load()
+
+    # Set mold-proof duration from options
+    duration = entry.options.get(CONF_MOLD_PROOF_DURATION, DEFAULT_MOLD_PROOF_DURATION)
+    mold_proof_manager.set_duration(duration)
+
     # Store coordinator
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Register update listener for options changes
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     return True
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (
@@ -16,6 +16,9 @@ from .api import ApiClient
 from .auth import AuthClient
 from .energy import EnergyCounter
 from .types import Aircond, UniqueID
+
+if TYPE_CHECKING:
+    from .mold_proof import MoldProofManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +36,7 @@ class GodaikinDataUpdateCoordinator(
         """Initialize the coordinator."""
         self.api = api_client
         self.energy = EnergyCounter()
+        self.mold_proof: MoldProofManager | None = None
 
         super().__init__(
             hass,

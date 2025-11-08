@@ -19,5 +19,26 @@
         "abort": {
             "already_configured": "Account is already configured"
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "GO DAIKIN Options",
+                "description": "Configure mold-proof settings",
+                "data": {
+                    "mold_proof_duration": "Mold-proof Duration (minutes)"
+                },
+                "data_description": {
+                    "mold_proof_duration": "How long to run the fan after turning off from cool/dry mode (default: 60 minutes)"
+                }
+            }
+        }
+    },
+    "entity": {
+        "switch": {
+            "mold_proof": {
+                "name": "Mold-proof"
+            }
+        }
     }
 }
