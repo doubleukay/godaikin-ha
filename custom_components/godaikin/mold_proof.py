@@ -163,6 +163,10 @@ class MoldProofManager:
                 _LOGGER.info("Finishing mold-proof for %s", unique_id)
 
                 try:
+                    # Restore fan speed before turning off
+                    await self.coordinator.api.set_fan_mode(
+                        unique_id, fan=state.previous_fan_speed
+                    )
                     await self.coordinator.api.turn_off(unique_id)
                     await self.coordinator.async_request_refresh()
                 except Exception as err:
