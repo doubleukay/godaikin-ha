@@ -23,7 +23,7 @@ class ApiClient:
         self.session = aiohttp.ClientSession()
 
     async def _api_request(self, endpoint: str, payload: dict) -> dict:
-        jwt_token = await self.auth.get_jwt_token()
+        jwt_token = await self.auth.async_get_jwt_token()
         async with self.session.post(
             f"{BASE_URL}{endpoint}",
             json=payload,
