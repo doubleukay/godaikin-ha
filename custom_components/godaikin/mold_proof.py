@@ -163,7 +163,10 @@ class MoldProofManager:
                 _LOGGER.info("Finishing mold-proof for %s", unique_id)
 
                 try:
-                    # Restore fan speed before turning off
+                    # Restore previous mode and fan speed before turning off
+                    await self.coordinator.api.set_mode(
+                        unique_id, mode=state.previous_mode
+                    )
                     await self.coordinator.api.set_fan_mode(
                         unique_id, fan=state.previous_fan_speed
                     )
