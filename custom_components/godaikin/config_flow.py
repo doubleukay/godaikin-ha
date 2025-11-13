@@ -37,7 +37,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     try:
         # Try to authenticate
-        await auth.get_jwt_token()
+        await auth.async_get_jwt_token()
 
         # Try to fetch air conditioners
         api = ApiClient(auth)
