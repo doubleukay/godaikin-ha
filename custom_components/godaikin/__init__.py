@@ -37,6 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = GodaikinDataUpdateCoordinator(
         hass=hass,
         api_client=api,
+        config_entry=entry,
     )
 
     # Fetch initial data

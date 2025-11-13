@@ -6,6 +6,7 @@ from datetime import timedelta
 import logging
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
@@ -32,6 +33,7 @@ class GodaikinDataUpdateCoordinator(
         self,
         hass: HomeAssistant,
         api_client: ApiClient,
+        config_entry: ConfigEntry,
     ) -> None:
         """Initialize the coordinator."""
         self.api = api_client
@@ -43,6 +45,7 @@ class GodaikinDataUpdateCoordinator(
             _LOGGER,
             name="GO DAIKIN",
             update_interval=timedelta(seconds=7),  # matches GO DAIKIN Android app
+            config_entry=config_entry,
         )
 
     async def _async_update_data(self) -> dict[UniqueID, Aircond]:
