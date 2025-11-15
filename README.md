@@ -18,8 +18,8 @@ NOTE: This is an unofficial integration and is not affiliated with Daikin.
 ## Installation
 
 ### HACS (Recommended)
-1. Open HACS in Home Assistant
-2. Search for "GO DAIKIN" and install
+1. [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=doubleukay&repository=godaikin-ha)
+2. Or, search for "GO DAIKIN" in HACS store and install
 
 ### Manual Installation
 1. Copy the `custom_components/godaikin` directory to your Home Assistant's `custom_components` directory
