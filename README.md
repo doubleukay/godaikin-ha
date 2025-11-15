@@ -50,6 +50,7 @@ For each air conditioner, the following entities will be created:
 - **Indoor Temperature**: Indoor room temperature (°C)
 - **Outdoor Temperature**: Outdoor air temperature (°C)
 - **Energy**: Total energy consumption (kWh). This counter resets every time HA restarts.
+- **Mold-proof remaining**: Remaining time in mold-proof mode
 
 ### Configuration
 - **Mold-proof**: After the aircond is turned off, run it on fan mode for an hour to reduce mold and bacteria buildup. This is simulated and does not use Daikin's built-in mold-proof mode.
