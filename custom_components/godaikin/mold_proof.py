@@ -196,6 +196,14 @@ class MoldProofManager:
         _LOGGER.info("Mold-proof interrupted for %s", unique_id)
         return True, state.previous_fan_speed
 
+    def async_unload(self) -> None:
+        """Cancel all pending timers (called on config entry unload)."""
+        for state in self._active_states.values():
+            if state.cancel_timer:
+                state.cancel_timer()
+                state.cancel_timer = None
+        self._active_states.clear()
+
     def get_state(self, unique_id: UniqueID) -> MoldProofState | None:
         """Get the mold-proof state for a device."""
         return self._active_states.get(unique_id)
