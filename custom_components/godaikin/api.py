@@ -20,7 +20,7 @@ class ApiClient:
         self.auth = auth
 
         self.airconds_by_unique_id: dict[UniqueID, Aircond] = {}
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
 
     async def _api_request(self, endpoint: str, payload: dict) -> dict:
         jwt_token = await self.auth.async_get_jwt_token()
@@ -80,6 +80,31 @@ class ApiClient:
             Set_OnOff=1,
             Set_Mode=mode.value,
         )
+
+    async def set_state(
+        self,
+        unique_id: UniqueID,
+        *,
+        on: bool,
+        mode: AircondMode | None = None,
+        fan: FanSpeed | None = None,
+    ):
+        """Set power and optionally mode and fan speed in one request."""
+        _LOGGER.info(
+            "Setting state on=%s mode=%s fan=%s for %s",
+            on,
+            mode.value if mode is not None else None,
+            fan.value if fan is not None else None,
+            unique_id,
+        )
+
+        state: dict[str, int] = {"Set_OnOff": int(on)}
+        if mode is not None:
+            state["Set_Mode"] = mode.value
+        if fan is not None:
+            state["Set_Fan"] = fan.value
+
+        await self._set_desired_state(unique_id, **state)
 
     async def set_preset(self, unique_id: UniqueID, preset: AircondPreset):
         _LOGGER.info("Setting preset %s for %s", preset.value, unique_id)

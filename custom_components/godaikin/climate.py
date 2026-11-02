@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
 from homeassistant.components.climate import (
+    ATTR_HVAC_MODE,
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
@@ -25,6 +27,7 @@ from .const import (
     TEMP_STEP,
 )
 from .coordinator import GodaikinDataUpdateCoordinator
+from .mold_proof import MoldProofState
 from .types import Aircond, AircondMode, AircondPreset, AircondSwing, FanSpeed, UniqueID
 
 _LOGGER = logging.getLogger(__name__)
@@ -234,17 +237,66 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
 
         return features
 
+    def _device_lock(self):
+        """Return the lock serialising commands (and mold-proof) for this AC."""
+        if self.coordinator.mold_proof:
+            return self.coordinator.mold_proof.device_lock(self._unique_id)
+        return contextlib.nullcontext()
+
+    def _mold_proof_state(self) -> MoldProofState | None:
+        """Return the active mold-proof state without ending the cycle."""
+        if not self.coordinator.mold_proof:
+            return None
+        return self.coordinator.mold_proof.get_state(self._unique_id)
+
+    async def _async_end_mold_proof(self, state: MoldProofState | None) -> None:
+        """End the cycle once the device commands for the user's request worked.
+
+        If a command raised we never get here, so the cycle (timer and persisted
+        entry) stays in place.
+        """
+        if state and self.coordinator.mold_proof:
+            await self.coordinator.mold_proof.interrupt_mold_proof(self._unique_id)
+
+    async def _async_restore_and_off(self, state: MoldProofState) -> None:
+        """Restore the pre-mold-proof mode/fan and power off in one request.
+
+        On success the cycle is ended. On failure it is kept but its finish is
+        brought forward, since the entity reports OFF while the fan may still
+        be running; the error is re-raised.
+        """
+        try:
+            await self.coordinator.api.set_state(
+                self._unique_id,
+                on=False,
+                mode=state.previous_mode,
+                fan=state.previous_fan_speed,
+            )
+        except Exception:
+            self.coordinator.mold_proof.reschedule_finish(state)
+            raise
+        await self._async_end_mold_proof(state)
+
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new HVAC mode."""
-        # Check if mold-proof is active and interrupt it
-        if self.coordinator.mold_proof:
-            was_active, prev_fan = (
-                await self.coordinator.mold_proof.interrupt_mold_proof(self._unique_id)
-            )
-            if was_active:
-                _LOGGER.debug("Mold-proof interrupted for mode change")
+        async with self._device_lock():
+            await self._async_set_hvac_mode_locked(hvac_mode)
+
+    async def _async_set_hvac_mode_locked(self, hvac_mode: HVACMode) -> None:
+        """Set new HVAC mode; the caller holds the device lock."""
+        # Check if mold-proof is active; it is ended after the commands succeed
+        state = self._mold_proof_state()
+        if state:
+            _LOGGER.debug("Mold-proof active during mode change")
 
         if hvac_mode == HVACMode.OFF:
+            if state:
+                # Device already had its mold-proof cycle: restore the
+                # pre-mold-proof settings and power off without a new cycle
+                await self._async_restore_and_off(state)
+                await self.coordinator.async_request_refresh()
+                return
+
             # Check if we should start mold-proof
             if (
                 self.coordinator.mold_proof
@@ -255,38 +307,75 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
                 current_mode = AircondMode(self.aircond.shadowState.Set_Mode)
                 if current_mode in (AircondMode.COOL, AircondMode.DRY):
                     prev_fan = FanSpeed(self.aircond.shadowState.Set_Fan)
-                    await self.coordinator.mold_proof.start_mold_proof(
+                    started = await self.coordinator.mold_proof.start_mold_proof_locked(
                         self._unique_id, current_mode, prev_fan
                     )
-                    await self.coordinator.async_request_refresh()
-                    return
+                    if started:
+                        await self.coordinator.async_request_refresh()
+                        return
+                    # Start failed, but its request may still have been applied:
+                    # the cycle is kept, so restore-and-off it to honour OFF
+                    if state := self._mold_proof_state():
+                        await self._async_restore_and_off(state)
+                        await self.coordinator.async_request_refresh()
+                        return
 
             # Normal turn off
             await self.coordinator.api.turn_off(self._unique_id)
-        elif hvac_mode == HVACMode.COOL:
-            await self.coordinator.api.set_mode(self._unique_id, mode=AircondMode.COOL)
-        elif hvac_mode == HVACMode.DRY:
-            await self.coordinator.api.set_mode(self._unique_id, mode=AircondMode.DRY)
-        elif hvac_mode == HVACMode.FAN_ONLY:
-            await self.coordinator.api.set_mode(
-                self._unique_id, mode=AircondMode.FAN_ONLY
-            )
+        else:
+            if hvac_mode == HVACMode.COOL:
+                mode = AircondMode.COOL
+            elif hvac_mode == HVACMode.DRY:
+                mode = AircondMode.DRY
+            elif hvac_mode == HVACMode.FAN_ONLY:
+                mode = AircondMode.FAN_ONLY
+            else:
+                mode = None
+
+            if mode is not None:
+                if state:
+                    # One request: requested mode plus the pre-mold-proof fan
+                    await self.coordinator.api.set_state(
+                        self._unique_id,
+                        on=True,
+                        mode=mode,
+                        fan=state.previous_fan_speed,
+                    )
+                else:
+                    await self.coordinator.api.set_mode(self._unique_id, mode=mode)
+
+            await self._async_end_mold_proof(state)
 
         await self.coordinator.async_request_refresh()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
-        if (temperature := kwargs.get(ATTR_TEMPERATURE)) is not None:
-            await self.coordinator.api.set_temperature(
-                self._unique_id, temperature=int(temperature)
-            )
-            await self.coordinator.async_request_refresh()
+        async with self._device_lock():
+            if (hvac_mode := kwargs.get(ATTR_HVAC_MODE)) is not None:
+                await self._async_set_hvac_mode_locked(hvac_mode)
+
+            if (temperature := kwargs.get(ATTR_TEMPERATURE)) is not None:
+                await self.coordinator.api.set_temperature(
+                    self._unique_id, temperature=int(temperature)
+                )
+                await self.coordinator.async_request_refresh()
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new fan mode."""
         fan = FanSpeed[fan_mode.upper()]
-        await self.coordinator.api.set_fan_mode(self._unique_id, fan=fan)
-        await self.coordinator.async_request_refresh()
+
+        # During mold-proof the device must stay on LOW; remember the choice
+        # so it is applied when the cycle ends or the user turns the AC on
+        async with self._device_lock():
+            mold_proof = self.coordinator.mold_proof
+            if mold_proof and (state := mold_proof.get_state(self._unique_id)):
+                state.previous_fan_speed = fan
+                await mold_proof.async_persist()
+                self.async_write_ha_state()
+                return
+
+            await self.coordinator.api.set_fan_mode(self._unique_id, fan=fan)
+            await self.coordinator.async_request_refresh()
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new swing mode."""
@@ -317,18 +406,22 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
-        # Interrupt mold-proof if active
-        if self.coordinator.mold_proof:
-            was_active, prev_fan = (
-                await self.coordinator.mold_proof.interrupt_mold_proof(self._unique_id)
-            )
-            if was_active:
-                _LOGGER.debug("Mold-proof interrupted for turn on")
-                # Restore previous fan speed
-                await self.coordinator.api.set_fan_mode(self._unique_id, fan=prev_fan)
-
-        await self.coordinator.api.turn_on(self._unique_id)
-        await self.coordinator.async_request_refresh()
+        async with self._device_lock():
+            # End mold-proof if active, once the commands have succeeded
+            state = self._mold_proof_state()
+            if state:
+                _LOGGER.debug("Mold-proof active during turn on")
+                # One request restores power, mode and fan speed
+                await self.coordinator.api.set_state(
+                    self._unique_id,
+                    on=True,
+                    mode=state.previous_mode,
+                    fan=state.previous_fan_speed,
+                )
+                await self._async_end_mold_proof(state)
+            else:
+                await self.coordinator.api.turn_on(self._unique_id)
+            await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""

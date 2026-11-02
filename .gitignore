@@ -220,3 +220,6 @@ __marimo__/
 .id_token
 *.swp
 .DS_Store
+
+# Local Panasonic refresh token (secret)
+.panasonic_refresh_token
