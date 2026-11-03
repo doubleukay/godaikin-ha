@@ -2,12 +2,15 @@
 Counts energy usage for airconds - uses Sta_ODPwrCon - quite similar results to GO DAIKIN energy data.
 """
 
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta
 import logging
 
 from .types import *
 
 _LOGGER = logging.getLogger(__name__)
+
+# Longer intervals between polls are treated as data gaps and not integrated.
+MAX_INTEGRATION_GAP = timedelta(seconds=60)
 
 
 class EnergyCounter:
@@ -23,6 +26,14 @@ class EnergyCounter:
         if not accumulated_at:
             # First accumulation
             return 0.0
+
+        if not aircond.is_connected:
+            # Sta_ODPwrCon is stale while disconnected; start fresh on reconnect.
+            return self.energy_by_unique_id.get(aircond.unique_id, 0.0)
+
+        if now - accumulated_at > MAX_INTEGRATION_GAP:
+            # Data gap: undercount rather than guess.
+            return self.energy_by_unique_id.get(aircond.unique_id, 0.0)
 
         energy_at_last_accum = self.energy_by_unique_id.get(aircond.unique_id, 0.0)
 
