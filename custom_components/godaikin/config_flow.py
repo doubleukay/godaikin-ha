@@ -43,9 +43,6 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         api = ApiClient(auth)
         airconds = await api.get_airconds()
 
-        if not airconds:
-            raise NoAirConditionersFound()
-
     except AuthError as err:
         raise InvalidAuth() from err
     except Exception as err:

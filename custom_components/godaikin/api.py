@@ -10,7 +10,7 @@ import logging
 from .auth import AuthClient
 from .types import *
 
-BASE_URL = "https://c7zkf7l933.execute-api.ap-southeast-1.amazonaws.com/prod/"
+BASE_URL = "https://jm41kogy2b.execute-api.ap-southeast-1.amazonaws.com/prod/"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,12 +35,13 @@ class ApiClient:
     async def get_airconds(self) -> list[Aircond]:
         _LOGGER.debug("Getting airconds")
 
+        user_id = await self.auth.async_get_user_id()
         response_data = await self._api_request(
-            "gethomepageinfowithsubscription",
+            "gethomepage",
             {
                 "requestData": {
                     "type": 1,
-                    "value": self.auth.username,
+                    "userID": user_id,
                 }
             },
         )
