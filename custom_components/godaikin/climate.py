@@ -32,6 +32,36 @@ from .types import Aircond, AircondMode, AircondPreset, AircondSwing, FanSpeed, 
 
 _LOGGER = logging.getLogger(__name__)
 
+_WARNED_UNKNOWN: set[tuple[str, str, Any]] = set()
+
+
+def _safe_enum(
+    enum_cls: type,
+    value: Any,
+    unique_id: str,
+    field: str,
+    default: Any = None,
+) -> Any:
+    """Cast a device value to an enum, returning default if it is unknown.
+
+    Logs a warning once per (device, field, value) to avoid flooding the log.
+    """
+    try:
+        return enum_cls(value)
+    except ValueError:
+        key = (unique_id, field, value)
+        if key not in _WARNED_UNKNOWN:
+            _WARNED_UNKNOWN.add(key)
+            _LOGGER.warning(
+                "Device %s reported unknown %s value %r; ignoring it. "
+                "Please report this at https://github.com/doubleukay/godaikin-ha/issues",
+                unique_id,
+                field,
+                value,
+            )
+        return default
+
+
 HVAC_MODE_MAP = {
     "off": HVACMode.OFF,
     "cool": HVACMode.COOL,
@@ -116,8 +146,15 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
         if not self.aircond.is_on:
             return HVACMode.OFF
 
-        mode = AircondMode(self.aircond.shadowState.Set_Mode).name.lower()
-        return HVAC_MODE_MAP.get(mode, HVACMode.OFF)
+        mode = _safe_enum(
+            AircondMode,
+            self.aircond.shadowState.Set_Mode,
+            self._unique_id,
+            "Set_Mode",
+        )
+        if mode is None:
+            return HVACMode.OFF
+        return HVAC_MODE_MAP.get(mode.name.lower(), HVACMode.OFF)
 
     @property
     def hvac_modes(self) -> list[HVACMode]:
@@ -145,7 +182,11 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
             if state:
                 return state.previous_fan_speed.name.lower()
 
-        fan_speed = FanSpeed(self.aircond.shadowState.Set_Fan)
+        fan_speed = _safe_enum(
+            FanSpeed, self.aircond.shadowState.Set_Fan, self._unique_id, "Set_Fan"
+        )
+        if fan_speed is None:
+            return None
         return fan_speed.name.lower()
 
     @property
@@ -156,7 +197,14 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
     @property
     def swing_mode(self) -> str | None:
         """Return the swing setting."""
-        swing = AircondSwing(self.aircond.shadowState.Set_UDLvr)
+        swing = _safe_enum(
+            AircondSwing,
+            self.aircond.shadowState.Set_UDLvr,
+            self._unique_id,
+            "Set_UDLvr",
+        )
+        if swing is None:
+            return None
         return swing.name.title()
 
     @property
@@ -173,7 +221,14 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
         if not self.aircond.shadowState.Ena_LRSwing:
             return None
 
-        swing = AircondSwing(self.aircond.shadowState.Set_LRLvr)
+        swing = _safe_enum(
+            AircondSwing,
+            self.aircond.shadowState.Set_LRLvr,
+            self._unique_id,
+            "Set_LRLvr",
+        )
+        if swing is None:
+            return None
         return swing.name.title()
 
     @property
@@ -304,9 +359,24 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
                 and self.aircond.is_on
             ):
                 # Only start mold-proof if coming from cool or dry mode
-                current_mode = AircondMode(self.aircond.shadowState.Set_Mode)
-                if current_mode in (AircondMode.COOL, AircondMode.DRY):
-                    prev_fan = FanSpeed(self.aircond.shadowState.Set_Fan)
+                current_mode = _safe_enum(
+                    AircondMode,
+                    self.aircond.shadowState.Set_Mode,
+                    self._unique_id,
+                    "Set_Mode",
+                )
+                # Unknown fan speed cannot be restored later, so skip
+                # mold-proof and turn off normally
+                prev_fan = _safe_enum(
+                    FanSpeed,
+                    self.aircond.shadowState.Set_Fan,
+                    self._unique_id,
+                    "Set_Fan",
+                )
+                if (
+                    current_mode in (AircondMode.COOL, AircondMode.DRY)
+                    and prev_fan is not None
+                ):
                     started = await self.coordinator.mold_proof.start_mold_proof_locked(
                         self._unique_id, current_mode, prev_fan
                     )
