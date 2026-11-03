@@ -80,7 +80,7 @@ For issues and feature requests, please use the [GitHub issue tracker](https://g
 
 ## License
 
-Copyright 2025 Woon Wai Keen
+Copyright 2025-2026 Woon Wai Keen
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
