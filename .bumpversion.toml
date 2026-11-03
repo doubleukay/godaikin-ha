@@ -1,0 +1,14 @@
+[tool.bumpversion]
+current_version = "2.1.7"
+commit = true
+tag = true
+tag_name = "v{new_version}"
+tag_message = "Bump version to {new_version}"
+message = "Bump version to {new_version}"
+commit_args = "--no-verify"
+allow_dirty = false
+
+[[tool.bumpversion.files]]
+filename = "custom_components/godaikin/manifest.json"
+search = '"version": "{current_version}"'
+replace = '"version": "{new_version}"'
