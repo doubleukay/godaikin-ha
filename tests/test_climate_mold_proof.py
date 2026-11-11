@@ -35,8 +35,18 @@ async def _start(manager, coordinator):
     coordinator.api.reset_mock()
 
 
+def _record_active_on_notify(manager, coordinator):
+    """Record is_active() at every listener notification."""
+    seen = []
+    coordinator.notify_listeners.side_effect = lambda: seen.append(
+        manager.is_active(UID_A)
+    )
+    return seen
+
+
 async def test_turn_on_restores_mode_and_fan(entity, manager, coordinator, timers):
     await _start(manager, coordinator)
+    seen = _record_active_on_notify(manager, coordinator)
 
     await entity.async_turn_on()
 
@@ -45,7 +55,8 @@ async def test_turn_on_restores_mode_and_fan(entity, manager, coordinator, timer
     ]
     timers[0][2].assert_called_once()
     assert not manager.is_active(UID_A)
-    coordinator.async_request_refresh.assert_awaited()
+    # listeners are notified after the cycle was popped, so the new mode shows
+    assert seen == [False]
 
 
 async def test_turn_on_without_mold_proof_is_plain(entity, coordinator):
@@ -316,3 +327,90 @@ async def test_queued_old_timer_does_not_finish_new_cycle(
     state = manager.get_state(UID_A)
     assert state is not None and state.token != old_token
     assert call.turn_off(UID_A) not in coordinator.api.mock_calls
+
+
+async def test_set_hvac_mode_mid_cycle_notifies_after_pop(
+    entity, manager, coordinator, timers
+):
+    await _start(manager, coordinator)
+    seen = _record_active_on_notify(manager, coordinator)
+
+    await entity.async_set_hvac_mode(HVACMode.COOL)
+
+    assert seen == [False]
+
+
+async def test_turn_off_mid_cycle_notifies_after_pop(
+    entity, manager, coordinator, timers
+):
+    await _start(manager, coordinator)
+    seen = _record_active_on_notify(manager, coordinator)
+
+    await entity.async_set_hvac_mode(HVACMode.OFF)
+
+    assert seen == [False]
+
+
+async def test_no_post_command_refresh(entity, coordinator):
+    await entity.async_turn_on()
+    await entity.async_set_fan_mode("low")
+
+    coordinator.async_request_refresh.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "method, arg",
+    [
+        ("async_set_swing_mode", "off"),
+        ("async_set_swing_horizontal_mode", "off"),
+        ("async_set_preset_mode", "none"),
+    ],
+)
+async def test_swing_and_preset_setters_take_device_lock(
+    entity, manager, coordinator, method, arg
+):
+    held = []
+    coordinator.api.set_swing.side_effect = lambda *a, **k: held.append(
+        manager.device_lock(UID_A).locked()
+    )
+    coordinator.api.set_preset.side_effect = coordinator.api.set_swing.side_effect
+
+    await getattr(entity, method)(arg)
+
+    assert held == [True]
+    assert not manager.device_lock(UID_A).locked()
+
+
+async def test_start_and_finish_succeed_when_hook_misbehaves(
+    manager, coordinator, timers
+):
+    """The real coordinator hook with a raising listener must not fail commands."""
+    from custom_components.godaikin.api import ApiClient
+    from custom_components.godaikin.coordinator import GodaikinDataUpdateCoordinator
+    from unittest.mock import AsyncMock, patch
+
+    with patch("aiohttp.ClientSession"):
+        api = ApiClient(MagicMock())
+    api._api_request = AsyncMock(return_value={})
+    aircond = MagicMock()
+    api.airconds_by_unique_id = {UID_A: aircond}
+    real = GodaikinDataUpdateCoordinator(MagicMock(), api, MagicMock())
+    real.async_add_listener(MagicMock(side_effect=RuntimeError("boom")))
+    coordinator.api = api
+    coordinator.notify_listeners = real.notify_listeners
+
+    assert await manager.start_mold_proof(UID_A, PREV_MODE, PREV_FAN) is True
+    assert manager.is_active(UID_A)
+
+    await manager._finish_mold_proof(UID_A)
+    assert not manager.is_active(UID_A)
+
+
+async def test_finish_notifies_listeners_after_pop(manager, coordinator, timers):
+    await _start(manager, coordinator)
+    seen = _record_active_on_notify(manager, coordinator)
+
+    await manager._finish_mold_proof(UID_A)
+
+    assert seen == [False]
+    coordinator.async_request_refresh.assert_awaited()

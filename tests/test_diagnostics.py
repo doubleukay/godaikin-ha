@@ -57,6 +57,7 @@ async def test_diagnostics_redacts_identifiers():
     coordinator = MagicMock()
     coordinator.data = {a.unique_id: a, b.unique_id: b}
     coordinator.last_update_success = True
+    coordinator.overlay.snapshot.return_value = {}
     coordinator.last_update_success_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
     coordinator.update_interval = "0:00:30"
     coordinator.get_energy_usage.return_value = 1.2345

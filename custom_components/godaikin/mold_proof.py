@@ -499,6 +499,7 @@ class MoldProofManager:
             if self._active_states.get(unique_id) is state:
                 self._pop_state(unique_id)
             await self._async_save()
+            self.coordinator.notify_listeners()
 
         try:
             await self.coordinator.async_request_refresh()
@@ -529,6 +530,8 @@ class MoldProofManager:
 
         await self._async_save()
         _LOGGER.info("Mold-proof interrupted for %s", unique_id)
+        # The cycle is gone: refresh entities that depend on it
+        self.coordinator.notify_listeners()
         return state
 
     @callback

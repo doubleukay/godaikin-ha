@@ -14,6 +14,9 @@ CONF_MOLD_PROOF_ENABLED = "mold_proof_enabled"
 DEFAULT_MOLD_PROOF_DURATION = 60  # minutes
 DEFAULT_MOLD_PROOF_ENABLED = False
 
+# How long a sent command is shown before the cloud state wins again (seconds)
+OPTIMISTIC_TTL = 30
+
 # Platforms
 PLATFORMS = ["climate", "sensor", "light", "switch"]
 

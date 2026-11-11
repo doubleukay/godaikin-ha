@@ -349,7 +349,6 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
                 # Device already had its mold-proof cycle: restore the
                 # pre-mold-proof settings and power off without a new cycle
                 await self._async_restore_and_off(state)
-                await self.coordinator.async_request_refresh()
                 return
 
             # Check if we should start mold-proof
@@ -381,13 +380,11 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
                         self._unique_id, current_mode, prev_fan
                     )
                     if started:
-                        await self.coordinator.async_request_refresh()
                         return
                     # Start failed, but its request may still have been applied:
                     # the cycle is kept, so restore-and-off it to honour OFF
                     if state := self._mold_proof_state():
                         await self._async_restore_and_off(state)
-                        await self.coordinator.async_request_refresh()
                         return
 
             # Normal turn off
@@ -416,8 +413,6 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
 
             await self._async_end_mold_proof(state)
 
-        await self.coordinator.async_request_refresh()
-
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         async with self._device_lock():
@@ -428,7 +423,6 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
                 await self.coordinator.api.set_temperature(
                     self._unique_id, temperature=int(temperature)
                 )
-                await self.coordinator.async_request_refresh()
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new fan mode."""
@@ -445,23 +439,22 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
                 return
 
             await self.coordinator.api.set_fan_mode(self._unique_id, fan=fan)
-            await self.coordinator.async_request_refresh()
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new swing mode."""
         swing = AircondSwing[swing_mode.upper()]
-        await self.coordinator.api.set_swing(
-            self._unique_id, swing=swing, horizontal=False
-        )
-        await self.coordinator.async_request_refresh()
+        async with self._device_lock():
+            await self.coordinator.api.set_swing(
+                self._unique_id, swing=swing, horizontal=False
+            )
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new horizontal swing mode."""
         swing = AircondSwing[swing_horizontal_mode.upper()]
-        await self.coordinator.api.set_swing(
-            self._unique_id, swing=swing, horizontal=True
-        )
-        await self.coordinator.async_request_refresh()
+        async with self._device_lock():
+            await self.coordinator.api.set_swing(
+                self._unique_id, swing=swing, horizontal=True
+            )
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
@@ -471,8 +464,8 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
             _LOGGER.warning("Unknown preset mode: %s", preset_mode)
             preset = AircondPreset.NONE
 
-        await self.coordinator.api.set_preset(self._unique_id, preset=preset)
-        await self.coordinator.async_request_refresh()
+        async with self._device_lock():
+            await self.coordinator.api.set_preset(self._unique_id, preset=preset)
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
@@ -491,7 +484,6 @@ class GodaikinClimate(CoordinatorEntity[GodaikinDataUpdateCoordinator], ClimateE
                 await self._async_end_mold_proof(state)
             else:
                 await self.coordinator.api.turn_on(self._unique_id)
-            await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""

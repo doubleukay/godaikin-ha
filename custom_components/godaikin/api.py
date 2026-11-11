@@ -3,6 +3,7 @@ API Client for interacting with the GO DAIKIN cloud service.
 """
 
 import asyncio
+from collections.abc import Callable
 from datetime import datetime as dt, timedelta
 import aiohttp
 import logging
@@ -18,6 +19,8 @@ _LOGGER = logging.getLogger(__name__)
 class ApiClient:
     def __init__(self, auth: AuthClient):
         self.auth = auth
+        # Called with (unique_id, desired) after a state change was sent
+        self.on_desired_sent: Callable[[UniqueID, dict], None] | None = None
 
         self.airconds_by_unique_id: dict[UniqueID, Aircond] = {}
         self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30))
@@ -220,6 +223,12 @@ class ApiClient:
             unique_id,
             response_data,
         )
+
+        if self.on_desired_sent:
+            try:
+                self.on_desired_sent(unique_id, dict(state))
+            except Exception:
+                _LOGGER.exception("Optimistic state hook failed")
 
     async def get_total_energy_today(self, aircond: Aircond) -> float:
         # NOTE: unused for now - getacgraphdata API isn't timely with new data. Kept for reference.

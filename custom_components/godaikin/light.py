@@ -84,9 +84,7 @@ class GodaikinStatusLED(CoordinatorEntity[GodaikinDataUpdateCoordinator], LightE
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the status LED on."""
         await self.coordinator.api.set_status_led(self._unique_id, on=True)
-        await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the status LED off."""
         await self.coordinator.api.set_status_led(self._unique_id, on=False)
-        await self.coordinator.async_request_refresh()

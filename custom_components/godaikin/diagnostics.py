@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
@@ -74,6 +75,7 @@ async def async_get_config_entry_diagnostics(
     username = entry.data.get("username")
     if username:
         sensitive.add(str(username))
+    pending = coordinator.overlay.snapshot(time.monotonic())
     for index, (unique_id, aircond) in enumerate(coordinator.data.items()):
         for ident in (
             unique_id,
@@ -109,6 +111,7 @@ async def async_get_config_entry_diagnostics(
             ),
             "sub_start_date": aircond.subStartDate,
             "subnet_mask": aircond.subnetMask,
+            "pending_optimistic": pending.get(unique_id, {}),
             "energy": {
                 "accumulated_kwh": round(coordinator.get_energy_usage(unique_id), 3),
             },
