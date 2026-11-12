@@ -13,5 +13,5 @@
     "requirements": [
         "boto3>=1.37.1"
     ],
-    "version": "2.1.8"
+    "version": "2.1.9"
 }
